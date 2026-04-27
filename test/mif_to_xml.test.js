@@ -1,7 +1,10 @@
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { convertAnchorsToXml } = require('../mif_to_xml');
+const { convertAnchorsToXml, convertMifDirectory } = require('../mif_to_xml');
 
 const SAMPLE = `
 <ATbl 16>
@@ -65,4 +68,25 @@ test('ATbl maps to matching TblID block', () => {
 test('missing table emits missing-table XML tag', () => {
   const xml = convertAnchorsToXml('<ATbl 99>');
   assert.ok(xml.includes('<missing-table id="99" />'));
+});
+
+test('directory mode converts all .mif files into separate xml files', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mif-dir-test-'));
+  const inputDir = path.join(tempRoot, 'mif');
+  const outputDir = path.join(tempRoot, 'xml');
+
+  fs.mkdirSync(inputDir, { recursive: true });
+  fs.writeFileSync(path.join(inputDir, 'a.mif'), SAMPLE, 'utf8');
+  fs.writeFileSync(path.join(inputDir, 'b.MIF'), '<ATbl 99>', 'utf8');
+  fs.writeFileSync(path.join(inputDir, 'ignore.txt'), 'not mif', 'utf8');
+
+  const converted = convertMifDirectory(inputDir, outputDir);
+
+  assert.equal(converted.length, 2);
+
+  const aXml = fs.readFileSync(path.join(outputDir, 'a.xml'), 'utf8');
+  const bXml = fs.readFileSync(path.join(outputDir, 'b.xml'), 'utf8');
+
+  assert.ok(aXml.includes('<table id="16">'));
+  assert.ok(bXml.includes('<missing-table id="99" />'));
 });
