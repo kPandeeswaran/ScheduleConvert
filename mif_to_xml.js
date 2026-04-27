@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require('node:fs');
+const path = require('node:path');
 
 const ATBL_RE = /<ATbl\s+(\d+)>/g;
 
@@ -153,32 +154,99 @@ function convertAnchorsToXml(mifText) {
   return parts.join('');
 }
 
-function main(argv = process.argv.slice(2)) {
-  if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
-    console.error('Usage: node mif_to_xml.js <input.mif> [-o output.xml]');
-    return 1;
+function convertMifFile(inputPath) {
+  const mifText = fs.readFileSync(inputPath, 'utf8');
+  return `${convertAnchorsToXml(mifText)}\n`;
+}
+
+function convertMifDirectory(inputDir, outputDir) {
+  const files = fs
+    .readdirSync(inputDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.mif'))
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  const converted = [];
+  for (const fileName of files) {
+    const inputPath = path.join(inputDir, fileName);
+    const baseName = fileName.replace(/\.mif$/i, '');
+    const outputPath = path.join(outputDir, `${baseName}.xml`);
+
+    fs.writeFileSync(outputPath, convertMifFile(inputPath), 'utf8');
+    converted.push({ inputPath, outputPath });
   }
 
-  const input = argv[0];
-  let output = null;
+  return converted;
+}
 
-  for (let i = 1; i < argv.length; i += 1) {
-    if (argv[i] === '-o' || argv[i] === '--output') {
-      output = argv[i + 1] ?? null;
+function parseArgs(argv) {
+  const options = {
+    inputFile: null,
+    outputFile: null,
+    inputDir: null,
+    outputDir: null,
+  };
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+
+    if (token === '-o' || token === '--output') {
+      options.outputFile = argv[i + 1] ?? null;
       i += 1;
+      continue;
+    }
+
+    if (token === '--input-dir') {
+      options.inputDir = argv[i + 1] ?? null;
+      i += 1;
+      continue;
+    }
+
+    if (token === '--output-dir') {
+      options.outputDir = argv[i + 1] ?? null;
+      i += 1;
+      continue;
+    }
+
+    if (!token.startsWith('-') && options.inputFile === null) {
+      options.inputFile = token;
     }
   }
 
-  if (!input) {
+  return options;
+}
+
+function main(argv = process.argv.slice(2)) {
+  if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
+    console.error('Usage: node mif_to_xml.js <input.mif> [-o output.xml]');
+    console.error('   or: node mif_to_xml.js --input-dir mif --output-dir xml');
+    return 1;
+  }
+
+  const options = parseArgs(argv);
+
+  if (options.inputDir || options.outputDir) {
+    if (!options.inputDir || !options.outputDir) {
+      console.error('Error: both --input-dir and --output-dir are required together.');
+      return 1;
+    }
+
+    const converted = convertMifDirectory(options.inputDir, options.outputDir);
+    process.stdout.write(`Converted ${converted.length} MIF file(s) to XML in ${options.outputDir}\n`);
+    return 0;
+  }
+
+  if (!options.inputFile) {
     console.error('Error: input file path is required.');
     return 1;
   }
 
-  const mifText = fs.readFileSync(input, 'utf8');
-  const xmlText = `${convertAnchorsToXml(mifText)}\n`;
+  const xmlText = convertMifFile(options.inputFile);
 
-  if (output) {
-    fs.writeFileSync(output, xmlText, 'utf8');
+  if (options.outputFile) {
+    fs.writeFileSync(options.outputFile, xmlText, 'utf8');
   } else {
     process.stdout.write(xmlText);
   }
@@ -192,6 +260,8 @@ if (require.main === module) {
 
 module.exports = {
   convertAnchorsToXml,
+  convertMifDirectory,
+  convertMifFile,
   parseTable,
   parseTables,
   tableToXml,
