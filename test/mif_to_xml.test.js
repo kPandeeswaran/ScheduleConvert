@@ -1,9 +1,9 @@
-import unittest
+const test = require('node:test');
+const assert = require('node:assert/strict');
 
-from mif_to_xml import convert_anchors_to_xml
+const { convertAnchorsToXml } = require('../mif_to_xml');
 
-
-SAMPLE = """
+const SAMPLE = `
 <ATbl 16>
 <Tbl 
  <TblID 16>
@@ -13,10 +13,10 @@ SAMPLE = """
     <CellContent 
      <Para 
       <ParaLine 
-       <String `Sl. '>
+       <String \`Sl. '>
       > # end of ParaLine
       <ParaLine 
-       <String `No.'>
+       <String \`No.'>
       > # end of ParaLine
      > # end of Para
     > # end of CellContent
@@ -25,7 +25,7 @@ SAMPLE = """
     <CellContent 
      <Para 
       <ParaLine 
-       <String `Header 2'>
+       <String \`Header 2'>
       > # end of ParaLine
      > # end of Para
     > # end of CellContent
@@ -36,7 +36,7 @@ SAMPLE = """
     <CellContent 
      <Para 
       <ParaLine 
-       <String `1.'>
+       <String \`1.'>
       > # end of ParaLine
      > # end of Para
     > # end of CellContent
@@ -45,7 +45,7 @@ SAMPLE = """
     <CellContent 
      <Para 
       <ParaLine 
-       <String `Value'>
+       <String \`Value'>
       > # end of ParaLine
      > # end of Para
     > # end of CellContent
@@ -53,20 +53,16 @@ SAMPLE = """
   > # end of Row
  > # end of TblBody
 > # end of Tbl
-"""
+`;
 
+test('ATbl maps to matching TblID block', () => {
+  const xml = convertAnchorsToXml(SAMPLE);
+  assert.ok(xml.includes('<table id="16">'));
+  assert.ok(xml.includes('<cell>Sl. No.</cell>'));
+  assert.ok(xml.includes('<cell>Value</cell>'));
+});
 
-class TestMifToXml(unittest.TestCase):
-    def test_atbl_maps_to_tblid(self):
-        xml = convert_anchors_to_xml(SAMPLE)
-        self.assertIn('<table id="16">', xml)
-        self.assertIn('<cell>Sl. No.</cell>', xml)
-        self.assertIn('<cell>Value</cell>', xml)
-
-    def test_missing_table(self):
-        xml = convert_anchors_to_xml("<ATbl 99>")
-        self.assertIn('<missing-table id="99" />', xml)
-
-
-if __name__ == "__main__":
-    unittest.main()
+test('missing table emits missing-table XML tag', () => {
+  const xml = convertAnchorsToXml('<ATbl 99>');
+  assert.ok(xml.includes('<missing-table id="99" />'));
+});
