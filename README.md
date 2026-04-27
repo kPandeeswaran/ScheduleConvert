@@ -1,6 +1,6 @@
 # ScheduleConvert
 
-Converts FrameMaker MIF table references to XML.
+Converts FrameMaker MIF table references to XML using Node.js.
 
 ## Rule implemented
 
@@ -9,7 +9,13 @@ Converts FrameMaker MIF table references to XML.
 ## Usage
 
 ```bash
-python3 mif_to_xml.py input.mif -o output.xml
+node mif_to_xml.js input.mif -o output.xml
 ```
 
 If `-o` is omitted, XML prints to stdout.
+
+## Run tests
+
+```bash
+npm test
+```
