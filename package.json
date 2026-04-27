@@ -2,9 +2,12 @@
   "name": "schedule-convert",
   "version": "1.0.0",
   "description": "Convert FrameMaker MIF table references to XML",
-  "main": "mif_to_xml.js",
+  "main": "src/converter.js",
+  "bin": {
+    "mif-to-xml": "mif_to_xml.js"
+  },
   "scripts": {
-    "test": "node --test"
+    "convert": "node mif_to_xml.js"
   },
   "license": "MIT"
 }
