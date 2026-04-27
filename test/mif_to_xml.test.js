@@ -4,7 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { convertAnchorsToXml, convertMifDirectory } = require('../mif_to_xml');
+const { convertAnchorsToXml, convertMifDirectory, main, parseArgs } = require('../mif_to_xml');
 
 const SAMPLE = `
 <ATbl 16>
@@ -89,4 +89,30 @@ test('directory mode converts all .mif files into separate xml files', () => {
 
   assert.ok(aXml.includes('<table id="16">'));
   assert.ok(bXml.includes('<missing-table id="99" />'));
+});
+
+test('parseArgs accepts folder aliases', () => {
+  const parsed = parseArgs(['--input-folder', 'in', '--output-folder', 'out']);
+  assert.equal(parsed.inputDir, 'in');
+  assert.equal(parsed.outputDir, 'out');
+});
+
+test('no-arg mode converts from ./input to ./output', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mif-default-dir-test-'));
+  const inputDir = path.join(tempRoot, 'input');
+  const outputDir = path.join(tempRoot, 'output');
+  fs.mkdirSync(inputDir, { recursive: true });
+  fs.writeFileSync(path.join(inputDir, 'from-default.mif'), SAMPLE, 'utf8');
+
+  const originalCwd = process.cwd();
+  process.chdir(tempRoot);
+  try {
+    const exitCode = main([]);
+    assert.equal(exitCode, 0);
+  } finally {
+    process.chdir(originalCwd);
+  }
+
+  const generatedXml = fs.readFileSync(path.join(outputDir, 'from-default.xml'), 'utf8');
+  assert.ok(generatedXml.includes('<table id="16">'));
 });

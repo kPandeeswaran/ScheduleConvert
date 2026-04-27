@@ -198,13 +198,13 @@ function parseArgs(argv) {
       continue;
     }
 
-    if (token === '--input-dir') {
+    if (token === '--input-dir' || token === '--input-folder') {
       options.inputDir = argv[i + 1] ?? null;
       i += 1;
       continue;
     }
 
-    if (token === '--output-dir') {
+    if (token === '--output-dir' || token === '--output-folder') {
       options.outputDir = argv[i + 1] ?? null;
       i += 1;
       continue;
@@ -219,13 +219,19 @@ function parseArgs(argv) {
 }
 
 function main(argv = process.argv.slice(2)) {
-  if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
+  if (argv.includes('-h') || argv.includes('--help')) {
     console.error('Usage: node mif_to_xml.js <input.mif> [-o output.xml]');
     console.error('   or: node mif_to_xml.js --input-dir mif --output-dir xml');
+    console.error('   or: node mif_to_xml.js (uses ./input and ./output by default)');
     return 1;
   }
 
   const options = parseArgs(argv);
+
+  if (argv.length === 0) {
+    options.inputDir = path.join(process.cwd(), 'input');
+    options.outputDir = path.join(process.cwd(), 'output');
+  }
 
   if (options.inputDir || options.outputDir) {
     if (!options.inputDir || !options.outputDir) {
@@ -262,6 +268,8 @@ module.exports = {
   convertAnchorsToXml,
   convertMifDirectory,
   convertMifFile,
+  main,
+  parseArgs,
   parseTable,
   parseTables,
   tableToXml,
