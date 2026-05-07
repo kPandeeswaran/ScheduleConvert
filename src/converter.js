@@ -16,7 +16,7 @@ function extractTableBlocks(mifText) {
 
     if (current) {
       current.push(line);
-      if (stripped.startsWith('> # end of Tbl')) {
+      if (/^> # end of Tbl$/.test(stripped)) {
         blocks.push(current.join('\n'));
         current = null;
       }
@@ -129,11 +129,19 @@ function tableToXml(table) {
 
 function convertAnchorsToXml(mifText) {
   const tables = parseTables(mifText);
-  const seen = new Set();
+  const anchorIds = [...mifText.matchAll(ATBL_RE)].map((match) => Number(match[1]));
   const parts = ['<tables>'];
 
-  for (const match of mifText.matchAll(ATBL_RE)) {
-    const tableId = Number(match[1]);
+  if (anchorIds.length === 0) {
+    for (const tableId of [...tables.keys()].sort((a, b) => a - b)) {
+      parts.push(tableToXml(tables.get(tableId)));
+    }
+    parts.push('</tables>');
+    return parts.join('');
+  }
+
+  const seen = new Set();
+  for (const tableId of anchorIds) {
     if (seen.has(tableId)) {
       continue;
     }
